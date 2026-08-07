@@ -1,0 +1,53 @@
+reference label = "44"  (widest of 01..53)
+
+--- centring at 16 px: transparent margin each side of the digits ---
+  week 32  ink w=15  left= 0 right= 1  off by 1
+  week 11  ink w=11  left= 2 right= 3  off by 1
+  week 44  ink w=16  left= 0 right= 0  centred
+  week 53  ink w=15  left= 0 right= 1  off by 1
+  week  1  ink w=12  left= 2 right= 2  centred
+  week  8  ink w=16  left= 0 right= 0  centred
+
+--- centring at 24 px: transparent margin each side of the digits ---
+  week 32  ink w=22  left= 1 right= 1  centred
+  week 11  ink w=15  left= 4 right= 5  off by 1
+  week 44  ink w=23  left= 0 right= 1  off by 1
+  week 53  ink w=22  left= 1 right= 1  centred
+  week  1  ink w=18  left= 3 right= 3  centred
+  week  8  ink w=22  left= 1 right= 1  centred
+
+--- centring at 32 px: transparent margin each side of the digits ---
+  week 32  ink w=30  left= 1 right= 1  centred
+  week 11  ink w=20  left= 5 right= 7  off by 2
+  week 44  ink w=31  left= 0 right= 1  off by 1
+  week 53  ink w=30  left= 1 right= 1  centred
+  week  1  ink w=24  left= 4 right= 4  centred
+  week  8  ink w=30  left= 1 right= 1  centred
+
+--- digit ink height at 16 px (clock type is 12 px) ---
+  NumberOnly       digits 10 px  ( 62% of the icon)
+  FrameOutline     digits  8 px  ( 50% of the icon)
+  FrameBar         digits  8 px  ( 50% of the icon)
+  FrameRings       digits  8 px  ( 50% of the icon)
+  BarOverNumber    digits 10 px  ( 62% of the icon)
+  BarWithRings     digits 10 px  ( 62% of the icon)
+  BadgeKnockout    digits  7 px  ( 43% of the icon)
+
+--- digit ink height at 24 px (clock type is 18 px) ---
+  NumberOnly       digits 15 px  ( 62% of the icon)
+  FrameOutline     digits 13 px  ( 54% of the icon)
+  FrameBar         digits 13 px  ( 54% of the icon)
+  FrameRings       digits 13 px  ( 54% of the icon)
+  BarOverNumber    digits 15 px  ( 62% of the icon)
+  BarWithRings     digits 15 px  ( 62% of the icon)
+  BadgeKnockout    digits 11 px  ( 45% of the icon)
+
+--- digit ink height at 32 px (clock type is 24 px) ---
+  NumberOnly       digits 20 px  ( 62% of the icon)
+  FrameOutline     digits 18 px  ( 56% of the icon)
+  FrameBar         digits 18 px  ( 56% of the icon)
+  FrameRings       digits 18 px  ( 56% of the icon)
+  BarOverNumber    digits 20 px  ( 62% of the icon)
+  BarWithRings     digits 20 px  ( 62% of the icon)
+  BadgeKnockout    digits 15 px  ( 46% of the icon)
+
