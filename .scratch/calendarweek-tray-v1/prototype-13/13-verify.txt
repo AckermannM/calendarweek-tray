@@ -1,0 +1,84 @@
+=== A — exact pixel diff of the taskbar across a text scale change ===
+
+A control diff at an unchanged setting comes first, so that whatever the taskbar does on
+its own — a clock tick, a repaint — is measured before it can be read as a response.
+
+control  100% -> 100% (4s apart) : 0 of 184320 pixels differ (0,000%)
+test     100% -> 200% (4s apart) : 0 of 184320 pixels differ (0,000%)
+test     100% -> 225% (8s apart) : 0 of 184320 pixels differ (0,000%)
+
+WinRT UISettings.TextScaleFactor was independently measured to move 1 -> 2 -> 1 across
+exactly this registry write, so the setting is unquestionably being applied system-wide.
+SM_CXSMICON throughout: 24
+
+=== B — the palette and the painted taskbar, per contrast theme ===
+
+--- no high contrast (dark theme, as the machine sits) ---
+  SystemInformation.HighContrast : False
+  SystemUsesLightTheme           : 0   <-- 07's only input
+  palette: Window=#FFFFFF WindowText=#000000 Control=#F0F0F0 ControlText=#000000 Menu=#F0F0F0 MenuText=#000000 Highlight=#0078D7 HighlightText=#FFFFFF Info=#FFFFE1 InfoText=#000000 GrayText=#6D6D6D HotTrack=#0066CC
+  taskbar as painted             : background #202020 ((none exact; nearest ActiveCaptionText at distance 55,4)), shell ink #FFFFFF (ButtonHighlight, ControlLightLight, HighlightText, Window)
+  candidate ink rules against that background:
+    07 as decided      #FFFFFF    16,29:1
+    WindowText         #000000     1,29:1   *** INVISIBLE ***
+    ControlText        #000000     1,29:1   *** INVISIBLE ***
+    MenuText           #000000     1,29:1   *** INVISIBLE ***
+    HC wins over auto  #FFFFFF    16,29:1
+    HC → ControlText   #FFFFFF    16,29:1
+
+--- high contrast ON — "High Contrast Black" ---
+  SystemInformation.HighContrast : True
+  SystemUsesLightTheme           : 0   <-- 07's only input
+  palette: Window=#202020 WindowText=#FFFFFF Control=#202020 ControlText=#FFFFFF Menu=#000000 MenuText=#FFFFFF Highlight=#8EE3F0 HighlightText=#263B50 Info=#000000 InfoText=#FFFFFF GrayText=#A6A6A6 HotTrack=#75E9FC
+  taskbar as painted             : background #202020 (ButtonFace, Control, Desktop, Window), shell ink #FFFFFF (ControlDarkDark, ControlLight, ControlText, InfoText, MenuText, WindowFrame, WindowText)
+  candidate ink rules against that background:
+    07 as decided      #FFFFFF    16,29:1
+    WindowText         #FFFFFF    16,29:1
+    ControlText        #FFFFFF    16,29:1
+    MenuText           #FFFFFF    16,29:1
+    HC wins over auto  #FFFFFF    16,29:1
+    HC → ControlText   #FFFFFF    16,29:1
+
+--- high contrast ON — "High Contrast White" ---
+  SystemInformation.HighContrast : True
+  SystemUsesLightTheme           : 0   <-- 07's only input
+  palette: Window=#FFFAEF WindowText=#3D3D3D Control=#FFFAEF ControlText=#202020 Menu=#FFFFFF MenuText=#000000 Highlight=#903909 HighlightText=#FFF5E3 Info=#FFFFFF InfoText=#000000 GrayText=#676767 HotTrack=#1C5E75
+  taskbar as painted             : background #FFFAEF (ButtonFace, Control, Desktop, Window), shell ink #000000 (ControlDarkDark, GradientActiveCaption, InactiveCaptionText, InfoText, MenuHighlight, MenuText, WindowFrame)
+  candidate ink rules against that background:
+    07 as decided      #FFFFFF     1,04:1   *** INVISIBLE ***
+    WindowText         #3D3D3D    10,43:1
+    ControlText        #202020    15,65:1
+    MenuText           #000000    20,17:1
+    HC wins over auto  #3D3D3D    10,43:1
+    HC → ControlText   #202020    15,65:1
+
+--- high contrast ON — "High Contrast #1" ---
+  SystemInformation.HighContrast : True
+  SystemUsesLightTheme           : 0   <-- 07's only input
+  palette: Window=#2D3236 WindowText=#FFFFFF Control=#2D3236 ControlText=#B6F6F0 Menu=#000000 MenuText=#FFFFFF Highlight=#A1BFDE HighlightText=#212D3B Info=#000000 InfoText=#FFFFFF GrayText=#A6A6A6 HotTrack=#70EBDE
+  taskbar as painted             : background #2D3236 (ButtonFace, Control, Desktop, Window), shell ink #FFFFFF (ControlDarkDark, ControlLight, InfoText, MenuText, WindowFrame, WindowText)
+  candidate ink rules against that background:
+    07 as decided      #FFFFFF    12,95:1
+    WindowText         #FFFFFF    12,95:1
+    ControlText        #B6F6F0    10,75:1
+    MenuText           #FFFFFF    12,95:1
+    HC wins over auto  #FFFFFF    12,95:1
+    HC → ControlText   #B6F6F0    10,75:1
+
+--- high contrast ON — "High Contrast #2" ---
+  SystemInformation.HighContrast : True
+  SystemUsesLightTheme           : 0   <-- 07's only input
+  palette: Window=#000000 WindowText=#FFFFFF Control=#000000 ControlText=#FFEE32 Menu=#000000 MenuText=#FFFFFF Highlight=#D6B4FD HighlightText=#2B2B2B Info=#000000 InfoText=#FFFFFF GrayText=#A6A6A6 HotTrack=#8080FF
+  taskbar as painted             : background #000000 (ActiveCaptionText, AppWorkspace, ButtonFace, Control, Desktop, InactiveCaptionText, Info, Menu, MenuBar, ScrollBar, Window), shell ink #FFFFFF (ControlDarkDark, ControlLight, InfoText, MenuText, WindowFrame, WindowText)
+  candidate ink rules against that background:
+    07 as decided      #FFFFFF    21,00:1
+    WindowText         #FFFFFF    21,00:1
+    ControlText        #FFEE32    17,53:1
+    MenuText           #FFFFFF    21,00:1
+    HC wins over auto  #FFFFFF    21,00:1
+    HC → ControlText   #FFEE32    17,53:1
+
+
+=== restore verification ===
+TextScaleFactor : (absent) OK
+high contrast   : False OK

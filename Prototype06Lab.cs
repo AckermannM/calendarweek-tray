@@ -57,6 +57,21 @@ internal sealed class Prototype06Lab : ApplicationContext
         }
         menu.Items.Add(centring);
 
+        // Added for ticket 12: the frame's 2 px cost at 16 px is these two constants, so they need
+        // to be flippable in the real tray, not just on a contact sheet.
+        ToolStripMenuItem tuning = new("Frame tuning (12)");
+        foreach (Candidate candidate in Candidate.All)
+        {
+            Candidate captured = candidate;
+            tuning.DropDownItems.Add($"{captured.Name} — {captured.Note}", null, (_, _) =>
+            {
+                PrototypeGlyph.BarFactor = captured.BarFactor;
+                PrototypeGlyph.BodyPad = captured.BodyPad;
+                Show(Array.IndexOf(Designs, captured.Design));
+            });
+        }
+        menu.Items.Add(tuning);
+
         ToolStripMenuItem weeks = new("Week shown");
         weeks.DropDownItems.Add("1  (worst case for centring)", null, (_, _) => SetWeek(1, false));
         weeks.DropDownItems.Add("11 (narrowest pair)", null, (_, _) => SetWeek(11, false));
@@ -106,9 +121,11 @@ internal sealed class Prototype06Lab : ApplicationContext
         previous?.Dispose();
         if (previousHandle != 0) NativeMethods.DestroyIcon(previousHandle);
 
-        // NotifyIcon.Text caps at 63 chars, so this is deliberately terse.
-        _notifyIcon.Text = $"{design} KW{_week} {box}px | {PrototypeGlyph.Centre} | "
-            + $"{PrototypeGlyph.Style.Name.Split("  ")[^1].Trim('(', ')')}";
+        // 07 measured the real cap at 127 chars, not 63 — but terse still reads better on hover.
+        // The digit height is in here because 12's whole question is that number against the clock.
+        _notifyIcon.Text = $"{design} KW{_week} | box {box}px | digits "
+            + $"{PrototypeGlyph.LastNumberInkHeight}px vs clock {PrototypeGlyph.ClockSizeFor(box)}px "
+            + $"| bar {PrototypeGlyph.BarFactor:0.00} pad {PrototypeGlyph.BodyPad}";
     }
 
     /// <summary>

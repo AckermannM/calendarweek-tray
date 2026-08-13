@@ -1,0 +1,54 @@
+=== ticket 13 — accessibility probe ===
+
+--- text scaling (work items 1 and 3) ---
+HKCU\Software\Microsoft\Accessibility exists : True
+  TextScaleFactor  : ABSENT (no value under an existing key)
+  read as percent  : 100
+SM_CXSMICON        : 24
+primary DPI        : 144 (150% scaling)
+icon box / dpi     : 16,00 px at 96 dpi
+clock type size    : 18 px (02's 12/16 ratio)
+
+--- high contrast (work item 4) ---
+SystemInformation.HighContrast : False
+HighContrast\Flags             : 126 (bit 0 = HCF_HIGHCONTRASTON)
+High Contrast Scheme           : ""
+SystemUsesLightTheme           : 0
+AppsUseLightTheme              : 0
+
+--- what each candidate ink rule resolves to right now ---
+  07 as decided      #FFFFFF   SystemUsesLightTheme ? black : white
+  WindowText         #000000   SystemColors.WindowText always
+  ControlText        #000000   SystemColors.ControlText always
+  MenuText           #000000   SystemColors.MenuText always
+  HC wins over auto  #FFFFFF   HighContrast ? WindowText : 07's rule
+  HC → ControlText   #FFFFFF   HighContrast ? ControlText : 07's rule
+
+--- system colours the rules might draw on ---
+  Window             #FFFFFF
+  WindowText         #000000
+  Control            #F0F0F0
+  ControlText        #000000
+  Menu               #F0F0F0
+  MenuText           #000000
+  Highlight          #0078D7
+  HighlightText      #FFFFFF
+  Info               #FFFFE1
+  InfoText           #000000
+  ActiveCaption      #99B4D1
+  ActiveCaptionText  #000000
+
+--- the taskbar as actually painted ---
+  bounds            : {X=0,Y=1528,Width=2560,Height=72}
+  distinct colours  : 6135
+  background        : #202020  = (none exact; nearest ActiveCaptionText at distance 55,4)
+  shell's own ink   : #FFFFFF  = ButtonHighlight, ControlLightLight, HighlightText, Window
+  contrast bg:ink   : 16,29:1
+
+  each candidate rule's ink against that measured background:
+    07 as decided      #FFFFFF    16,29:1
+    WindowText         #000000     1,29:1  <-- INVISIBLE
+    ControlText        #000000     1,29:1  <-- INVISIBLE
+    MenuText           #000000     1,29:1  <-- INVISIBLE
+    HC wins over auto  #FFFFFF    16,29:1
+    HC → ControlText   #FFFFFF    16,29:1

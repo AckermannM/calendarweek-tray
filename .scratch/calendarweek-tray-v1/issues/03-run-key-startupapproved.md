@@ -160,9 +160,13 @@ And these absolute rules:
 - **Never write to `StartupApproved` on startup.** Not to enable, not to "repair". The app reads it
   and never authors it during normal operation.
 - **Never overwrite an existing `Run` value** at startup, even a stale one pointing at a moved
-  binary. If the value exists but its path is not ours, surface it (tooltip / balloon) — do not
+  binary. ~~If the value exists but its path is not ours, surface it (tooltip / balloon)~~ — do not
   silently correct it. Silent correction is exactly the behaviour that makes this class of app
   distrusted, and the correction is unnecessary: the running instance already knows where it is.
+
+  > **Superseded in part by [`09`](09-autostart-deregistration.md).** The *never overwrite* rule
+  > stands. The *surface it* half is **retired**: the applet reports nothing about its own autostart
+  > state, in any case. Detect for the guard, stay silent.
 
 Reasoning against the alternatives:
 
@@ -185,6 +189,13 @@ corroborating live data; the recommendation is deliberately insensitive to it, s
 off *presence* of the value rather than its contents.
 
 ### Follow-on for other tickets
+
+> **Superseded by [`09`](09-autostart-deregistration.md) — do not implement the paragraph below.**
+> The recommendation is self-defeating on its own terms: guard rule 1 registers when the `Run` value
+> is *absent*, so a switch that deletes the value is undone by the very next launch unless the
+> tombstone lands too — and `09` ruled that the applet **never writes `StartupApproved`**, on the
+> grounds that the byte semantics rest on this ticket's own weakest source. `09` removed
+> deregistration from v1 entirely; Task Manager is the sole off-switch.
 
 The **uninstall story** (open in `map.md`) now has a clean shape: a `--unregister` switch deletes the
 `Run` value **and** writes a disabled tombstone `03 00 00 00` + zero FILETIME into

@@ -1,0 +1,69 @@
+ticket 12 — is the decided form too small at 16 px?
+
+--- 16 px icon, clock type 12 px ---
+  06 as decided    bar 3 px, 1 px air       digits  8 px  ( 66% of the clock)
+  thinner bar      bar 2 px, 1 px air       digits  8 px  ( 66% of the clock)
+  no inner air     bar 3 px, 0 px air       digits  9 px  ( 75% of the clock)
+  both opened up   bar 2 px, 0 px air       digits  9 px  ( 75% of the clock)
+  reduced: no page the ticket's option (b)  digits 10 px  ( 83% of the clock)
+  no cue at all    the ceiling — 06 rejected it digits 10 px  ( 83% of the clock)
+
+--- 20 px icon, clock type 15 px ---
+  06 as decided    bar 3 px, 1 px air       digits 11 px  ( 73% of the clock)
+  thinner bar      bar 2 px, 1 px air       digits 11 px  ( 73% of the clock)
+  no inner air     bar 3 px, 0 px air       digits 12 px  ( 80% of the clock)
+  both opened up   bar 2 px, 0 px air       digits 12 px  ( 80% of the clock)
+  reduced: no page the ticket's option (b)  digits 13 px  ( 86% of the clock)
+  no cue at all    the ceiling — 06 rejected it digits 13 px  ( 86% of the clock)
+
+--- 24 px icon, clock type 18 px ---
+  06 as decided    bar 3 px, 1 px air       digits 13 px  ( 72% of the clock)
+  thinner bar      bar 2 px, 1 px air       digits 13 px  ( 72% of the clock)
+  no inner air     bar 3 px, 0 px air       digits 14 px  ( 77% of the clock)
+  both opened up   bar 2 px, 0 px air       digits 14 px  ( 77% of the clock)
+  reduced: no page the ticket's option (b)  digits 15 px  ( 83% of the clock)
+  no cue at all    the ceiling — 06 rejected it digits 15 px  ( 83% of the clock)
+
+--- 32 px icon, clock type 24 px ---
+  06 as decided    bar 3 px, 1 px air       digits 18 px  ( 75% of the clock)
+  thinner bar      bar 2 px, 1 px air       digits 18 px  ( 75% of the clock)
+  no inner air     bar 3 px, 0 px air       digits 20 px  ( 83% of the clock)
+  both opened up   bar 2 px, 0 px air       digits 20 px  ( 83% of the clock)
+  reduced: no page the ticket's option (b)  digits 20 px  ( 83% of the clock)
+  no cue at all    the ceiling — 06 rejected it digits 20 px  ( 83% of the clock)
+
+--- does the digit ever touch the page outline? (16 px, gap in px) ---
+  the outline occupies row/column 0 and 15; a gap of 0 means they collide.
+  06 as decided    week 44  digits x=1..13 y=6..13   left gap  0  right gap  1  bottom gap  1
+  06 as decided    week  8  digits x=5..10 y=6..13   left gap  4  right gap  4  bottom gap  1
+  06 as decided    week 11  digits x=4..11 y=6..13   left gap  3  right gap  3  bottom gap  1
+  thinner bar      week 44  digits x=1..13 y=5..12   left gap  0  right gap  1  bottom gap  2
+  thinner bar      week  8  digits x=5..10 y=5..12   left gap  4  right gap  4  bottom gap  2
+  thinner bar      week 11  digits x=4..11 y=5..12   left gap  3  right gap  3  bottom gap  2
+  no inner air     week 44  digits x=1..14 y=5..13   left gap  0  right gap  0  bottom gap  1
+  no inner air     week  8  digits x=4..10 y=5..13   left gap  3  right gap  4  bottom gap  1
+  no inner air     week 11  digits x=3..11 y=5..13   left gap  2  right gap  3  bottom gap  1
+  both opened up   week 44  digits x=1..14 y=4..12   left gap  0  right gap  0  bottom gap  2
+  both opened up   week  8  digits x=4..10 y=4..12   left gap  3  right gap  4  bottom gap  2
+  both opened up   week 11  digits x=3..11 y=4..12   left gap  2  right gap  3  bottom gap  2
+
+--- ring slots at 16 px: crisp or mush? alpha across the bar rows ---
+  06 snapped the slots to whole pixels; 12 was told to verify, not assume.
+  06 as decided  (bar 3 px, 1 px air)
+    y=0   # # # # # . # # # # . # # # # #
+    y=1   # # # # # . # # # # . # # # # #
+    y=2   # # # # # . # # # # . # # # # #
+    y=3   # . . . . . . . . . . . . . . #
+    (# = opaque, . = clear, 1..8 = partial — a slot column must read '.')
+  thinner bar  (bar 2 px, 1 px air)
+    y=0   # # # # # . # # # # . # # # # #
+    y=1   # # # # # . # # # # . # # # # #
+    y=2   # . . . . . . . . . . . . . . #
+    y=3   # . . . . . . . . . . . . . . #
+    (# = opaque, . = clear, 1..8 = partial — a slot column must read '.')
+  reduced: no page  (the ticket's option (b))
+    y=0   . # # # # . # # # # . # # # # .
+    y=1   . # # # # . # # # # . # # # # .
+    y=2   . . . . . . . . . . . . . . . .
+    y=3   . . . . . . . . . . . . . . . .
+    (# = opaque, . = clear, 1..8 = partial — a slot column must read '.')

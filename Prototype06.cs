@@ -95,7 +95,15 @@ internal enum Centring
 internal static class PrototypeGlyph
 {
     /// <summary>Your pick from round 1.</summary>
-    public const string Face = "Segoe UI Variable Text Semibold";
+    public const string FaceDecided = "Segoe UI Variable Text Semibold";
+
+    /// <summary>
+    /// Settable for ticket 13, which needs to know whether a heavier weight is a legitimate
+    /// response to text scaling — the one lever 06 and 12 between them have not closed, because it
+    /// buys legibility without asking the box to grow. Defaults to exactly what 06 decided, so
+    /// 06's and 12's sheets still reproduce.
+    /// </summary>
+    public static string Face { get; set; } = FaceDecided;
 
     public const string FaceRegular = "Segoe UI Variable Text";
 
@@ -123,6 +131,18 @@ internal static class PrototypeGlyph
     /// SM_CXSMICON is 16, and both track DPI together, so the ratio holds across scalings.
     /// </summary>
     public static int ClockSizeFor(int box) => (int)Math.Round(box * 12.0 / 16.0);
+
+    // --- 12's tuning levers ---------------------------------------------------------------------
+    // Ticket 12 asks whether the decided form needs a reduced variant at 16 px, where the frame
+    // costs 2 of the 10 px of digit height a bare number gets. Before answering "two forms", it is
+    // worth knowing what the *same* form is capable of when its two constants are opened up. Both
+    // default to exactly what 06 decided, so 06's sheets still reproduce.
+
+    /// <summary>Binding bar height as a fraction of the box. 06 shipped 0.17 (3 px at 16).</summary>
+    public static float BarFactor { get; set; } = 0.17f;
+
+    /// <summary>Air between the page outline and the digits, in whole pixels. 06 shipped 1.</summary>
+    public static int BodyPad { get; set; } = 1;
 
     // --- the reference label -------------------------------------------------------------------
 
@@ -282,7 +302,7 @@ internal static class PrototypeGlyph
         int barHeight = 0;
         if (bar)
         {
-            barHeight = Math.Max(2, (int)Math.Round(box * 0.17));
+            barHeight = Math.Max(2, (int)Math.Round(box * BarFactor));
 
             // Whole pixels, from the very edge. Filling from page.Y (a half-pixel, because the
             // outline's stroke is centred there) leaves the bar's bottom edge straddling a pixel
@@ -298,7 +318,7 @@ internal static class PrototypeGlyph
         }
 
         // One pixel of air inside the border, no more: every pixel of padding comes off the digits.
-        const int bodyPad = 1;
+        int bodyPad = BodyPad;
         float top = page.Y + barHeight + bodyPad;
         float bottom = page.Bottom - bodyPad;
         RectangleF body = RectangleF.FromLTRB(page.X + bodyPad, top, page.Right - bodyPad, bottom);

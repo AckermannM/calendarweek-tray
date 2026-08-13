@@ -1,0 +1,66 @@
+restore point: TextScaleFactor = (absent), high contrast = False scheme ""
+
+=== phase 1 — text scaling ===
+The claim under test is the ticket's own premise: that raising Windows' text size makes
+'every label on their system larger' while our glyph stays put. Each row below captures
+the real taskbar, so the clock beside our glyph is measured rather than assumed.
+
+  text 100% (value absent)                   box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash a242ea06
+  text 125%                                  box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash a242ea06
+  text 150%                                  box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash a242ea06
+  text 200%                                  box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash a242ea06
+  text 225%                                  box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash a242ea06
+
+--- weight candidates, captured at 200% text scale ---
+  weight: Text                               box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash 4efb7d77
+  weight: Text Semibold                      box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash a242ea06
+  weight: Display Bold                       box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash e80b97ef
+
+=== phase 2 — high contrast ===
+07 reads SystemUsesLightTheme and picks pure white or pure black. Under a contrast theme
+the taskbar is painted from a third palette, so the question is whether that key still
+reports something our ink rule can trust.
+
+high contrast ON, scheme "High Contrast Black"
+  High Contrast Black — ink: 07 as decided   box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash f3392381
+  High Contrast Black — ink: WindowText      box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash f3392381
+  High Contrast Black — ink: ControlText     box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash f3392381
+  High Contrast Black — ink: MenuText        box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash f3392381
+  High Contrast Black — ink: HC wins over auto box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash f3392381
+  High Contrast Black — ink: HC → ControlText box 24  clock-ink 56px  bg #202020  ink #FFFFFF  SysLight 0  hash c230d52d
+high contrast ON, scheme "High Contrast White"
+  High Contrast White — ink: 07 as decided   box 24  clock-ink 56px  bg #FFFAEF  ink #000000  SysLight 0  hash 8442fd37
+  High Contrast White — ink: WindowText      box 24  clock-ink 56px  bg #FFFAEF  ink #000000  SysLight 0  hash aba23609
+  High Contrast White — ink: ControlText     box 24  clock-ink 56px  bg #FFFAEF  ink #000000  SysLight 0  hash 1346e19e
+  High Contrast White — ink: MenuText        box 24  clock-ink 66px  bg #FFFAEF  ink #000000  SysLight 0  hash 132fec5c
+  High Contrast White — ink: HC wins over auto box 24  clock-ink 56px  bg #FFFAEF  ink #000000  SysLight 0  hash 003dff3c
+  High Contrast White — ink: HC → ControlText box 24  clock-ink 56px  bg #FFFAEF  ink #000000  SysLight 0  hash 89ce20f2
+
+=== restore verification ===
+TextScaleFactor : (absent)   (was (absent)) OK
+high contrast   : False "High Contrast White"   (was False "") OK
+
+=== the matrix ===
+
+state                                      box clock SysLight bg        shell ink     hash
+------------------------------------------------------------------------------------------------
+text 100% (value absent)                    24    56        0 #202020   #FFFFFF   a242ea06
+text 125%                                   24    56        0 #202020   #FFFFFF   a242ea06
+text 150%                                   24    56        0 #202020   #FFFFFF   a242ea06
+text 200%                                   24    56        0 #202020   #FFFFFF   a242ea06
+text 225%                                   24    56        0 #202020   #FFFFFF   a242ea06
+weight: Text                                24    56        0 #202020   #FFFFFF   4efb7d77
+weight: Text Semibold                       24    56        0 #202020   #FFFFFF   a242ea06
+weight: Display Bold                        24    56        0 #202020   #FFFFFF   e80b97ef
+High Contrast Black — ink: 07 as decided    24    56        0 #202020   #FFFFFF   f3392381
+High Contrast Black — ink: WindowText       24    56        0 #202020   #FFFFFF   f3392381
+High Contrast Black — ink: ControlText      24    56        0 #202020   #FFFFFF   f3392381
+High Contrast Black — ink: MenuText         24    56        0 #202020   #FFFFFF   f3392381
+High Contrast Black — ink: HC wins over auto  24    56        0 #202020   #FFFFFF   f3392381
+High Contrast Black — ink: HC → ControlText  24    56        0 #202020   #FFFFFF   c230d52d
+High Contrast White — ink: 07 as decided    24    56        0 #FFFAEF   #000000   8442fd37
+High Contrast White — ink: WindowText       24    56        0 #FFFAEF   #000000   aba23609
+High Contrast White — ink: ControlText      24    56        0 #FFFAEF   #000000   1346e19e
+High Contrast White — ink: MenuText         24    66        0 #FFFAEF   #000000   132fec5c
+High Contrast White — ink: HC wins over auto  24    56        0 #FFFAEF   #000000   003dff3c
+High Contrast White — ink: HC → ControlText  24    56        0 #FFFAEF   #000000   89ce20f2
