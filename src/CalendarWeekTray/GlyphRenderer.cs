@@ -24,12 +24,15 @@ internal static class GlyphRenderer
 {
     private const string Face = "Segoe UI Variable Text Semibold";
     private const TextRenderingHint Hint = TextRenderingHint.AntiAlias;
-    private const float Stroke = 1.0f;
-    private const float BarFactor = 0.17f;
-    private const int BodyPad = 1;
-    private const float SlotWidthFactor = 0.08f;
-    private const float SlotCentreA = 0.32f;
-    private const float SlotCentreB = 0.68f;
+
+    // internal, not private: ticket 03's test suite measures against these directly rather than
+    // keeping a second, driftable copy of the same numbers (§5.3 — measured, not tuned).
+    internal const float Stroke = 1.0f;
+    internal const float BarFactor = 0.17f;
+    internal const int BodyPad = 1;
+    internal const float SlotWidthFactor = 0.08f;
+    internal const float SlotCentreA = 0.32f;
+    internal const float SlotCentreB = 0.68f;
     private const int MeasurePadding = 16;
 
     // Both caches are keyed on values that are inputs to the render, so neither can go stale the
@@ -353,8 +356,10 @@ internal static class GlyphRenderer
     /// <summary>
     /// The alpha-weighted horizontal centre of mass — where the glyph's ink actually sits, rather
     /// than where its bounding box does. A thin flag on one side barely moves this; a stem does.
+    /// internal, not private: ticket 03's centring test calls this directly rather than keeping a
+    /// separately-typed copy that would validate its own logic instead of the shipped code path.
     /// </summary>
-    private static float OpticalCentreX(Bitmap bitmap)
+    internal static float OpticalCentreX(Bitmap bitmap)
     {
         double weighted = 0;
         double total = 0;

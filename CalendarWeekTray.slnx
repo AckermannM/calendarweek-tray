@@ -2,4 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/CalendarWeekTray/CalendarWeekTray.csproj" />
   </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/CalendarWeekTray.Tests/CalendarWeekTray.Tests.csproj" />
+  </Folder>
 </Solution>
