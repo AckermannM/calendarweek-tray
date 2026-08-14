@@ -34,6 +34,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     public TrayApplicationContext()
     {
+        // Spec §8.1: autostart registration is a one-shot act, not part of Reconcile(), and runs
+        // before anything else in this constructor — not gated on config loading below, which
+        // can go on to fail without affecting it.
+        Autostart.Register();
+
         // Left-click does nothing (spec §7) — there is deliberately no Click/MouseClick handler.
         this.reloadMenuItem = new ToolStripMenuItem(text: string.Empty, image: null, this.OnReloadConfiguration);
         this.quitMenuItem = new ToolStripMenuItem(text: string.Empty, image: null, (_, _) => this.ExitThread());
