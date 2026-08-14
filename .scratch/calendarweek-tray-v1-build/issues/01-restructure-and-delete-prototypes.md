@@ -15,15 +15,29 @@ The eight files to delete are named in §1.3. The five measurement primitives li
 
 **Blocked by:** None — can start immediately.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] `prototype/06-13` branch pushed **before** anything is deleted — ticket 02 extracts the renderer from it
-- [ ] the eight prototype files deleted and the four survivors moved, **in one commit** (§1.3)
-- [ ] `Main` is mutex + `ApplicationConfiguration.Initialize()` + `Application.Run`, with no argv handling whatsoever
-- [ ] the mutex is `Local\`-scoped, held for the process lifetime, and a second instance exits silently with no dialog
-- [ ] solution file at the repo root; bare `dotnet build` works with no arguments
-- [ ] applet csproj gains `<Version>` and `<InternalsVisibleTo>`, and **does not** gain `<Compile Remove="Tests/**" />` — see §1.1 for why
-- [ ] every property in §1.2's "not to be touched" table survives the move unchanged
-- [ ] `.editorconfig` conformance: csproj tab-indented, no leading-underscore fields, `this.`-qualified instance members, file-scoped namespace, no `var`, Allman braces
-- [ ] `dotnet build` at 0 warnings, 0 errors
-- [ ] the icon still appears in the tray and still quits cleanly
+- [x] `prototype/06-13` branch pushed **before** anything is deleted — ticket 02 extracts the renderer from it
+- [x] the eight prototype files deleted and the four survivors moved, **in one commit** (§1.3)
+- [x] `Main` is mutex + `ApplicationConfiguration.Initialize()` + `Application.Run`, with no argv handling whatsoever
+- [x] the mutex is `Local\`-scoped, held for the process lifetime, and a second instance exits silently with no dialog
+- [x] solution file at the repo root; bare `dotnet build` works with no arguments
+- [x] applet csproj gains `<Version>` and `<InternalsVisibleTo>`, and **does not** gain `<Compile Remove="Tests/**" />` — see §1.1 for why
+- [x] every property in §1.2's "not to be touched" table survives the move unchanged
+- [x] `.editorconfig` conformance: csproj tab-indented, no leading-underscore fields, `this.`-qualified instance members, file-scoped namespace, no `var`, Allman braces
+- [x] `dotnet build` at 0 warnings, 0 errors
+- [x] the icon still appears in the tray and still quits cleanly
+
+## Answer
+
+Restructured in commit `fa1509d`. `prototype/06-13` pushed to origin at `6fbcb2a` before any
+deletion. The eight prototype files and nine argv commands are gone; `CalendarWeekTray.csproj`,
+`Program.cs`, `TrayApplicationContext.cs`, `NativeMethods.cs` moved to `src/CalendarWeekTray/` with
+the `.editorconfig` renames applied (`_notifyIcon`/`_iconHandle` → `this.notifyIcon`/`this.iconHandle`,
+tab-indented csproj). `Program.cs` is now `Local\CalendarWeekTray` mutex (`GC.KeepAlive`d past
+`Application.Run`) + `ApplicationConfiguration.Initialize()` + `Application.Run`, no argv handling.
+`CalendarWeekTray.slnx` added at the root via `dotnet new sln -f slnx`. Verified: `dotnet build` at
+repo root is 0 warnings/0 errors; running the exe twice leaves exactly one process with no dialog on
+the second launch; the placeholder glyph renders without throwing and the process exits with no
+residue. Test project intentionally **not** created here — its checklist item belongs to ticket 03,
+which is blocked by 02.
