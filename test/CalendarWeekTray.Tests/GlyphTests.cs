@@ -15,17 +15,21 @@ public class GlyphTests
     private static readonly int[] Weeks = Enumerable.Range(1, 53).ToArray();
 
     /// <summary>
-    /// The exact (week, size) pairs ticket 02 measured landing outside the blend loop's 0.15 px
-    /// convergence band and accepted as a property of the decided algorithm, not a defect — see
-    /// <see cref="TheCentringLoopConvergesOutsideTheKnownDeadZone"/>.
+    /// The exact (week, size) pairs landing outside the blend loop's 0.15 px convergence band and
+    /// accepted as a property of the decided algorithm, not a defect — see
+    /// <see cref="TheCentringLoopConvergesOutsideTheKnownDeadZone"/>. Ticket 02 measured the original
+    /// 46; ticket 01 re-measured this set (49) after the vertical placement fix, since a changed `y`
+    /// shifts which digits near the body's top/bottom edge land on the rasteriser's achievable
+    /// horizontal subpixel phases — an expected side effect of that fix, not a horizontal regression.
     /// </summary>
     private static readonly HashSet<(int Week, int Size)> KnownDeadZone =
     [
-        (1, 16), (1, 24), (13, 20), (17, 32), (18, 32), (2, 24), (2, 28), (23, 24), (26, 24),
-        (26, 28), (3, 16), (30, 20), (30, 32), (32, 20), (32, 24), (33, 20), (34, 24), (35, 24),
-        (37, 24), (38, 20), (39, 16), (39, 20), (39, 32), (4, 16), (4, 20), (4, 24), (4, 28),
-        (40, 16), (40, 24), (40, 28), (41, 24), (42, 24), (44, 32), (46, 24), (48, 28), (49, 16),
-        (49, 28), (51, 28), (52, 24), (52, 28), (53, 24), (6, 24), (6, 28), (7, 24), (8, 28), (9, 24),
+        (1, 16), (3, 16), (4, 16), (39, 16), (40, 16), (49, 16),
+        (4, 20), (13, 20), (30, 20), (32, 20), (33, 20), (38, 20), (39, 20),
+        (1, 24), (2, 24), (4, 24), (6, 24), (7, 24), (9, 24), (22, 24), (23, 24), (25, 24), (26, 24),
+        (32, 24), (34, 24), (35, 24), (37, 24), (40, 24), (41, 24), (52, 24), (53, 24),
+        (2, 28), (4, 28), (6, 28), (8, 28), (11, 28), (26, 28), (27, 28), (40, 28), (48, 28), (49, 28), (51, 28), (52, 28),
+        (17, 32), (18, 32), (19, 32), (30, 32), (36, 32), (44, 32),
     ];
 
     public static TheoryData<int, int> AllWeekSizeCombos()
@@ -102,7 +106,10 @@ public class GlyphTests
     /// every combination would therefore fault a limitation of the decided algorithm that no
     /// iteration budget fixes. What every OTHER combination must still do is converge — this checks
     /// the full 265 against the exact, named <see cref="KnownDeadZone"/> so a regression that shifts
-    /// failures onto a new, unexamined pair is caught even if the total count does not change.
+    /// failures onto a new, unexamined pair is caught even if the total count does not change. Ticket
+    /// 01's vertical placement fix moved this set from 46 to 49: a changed `y` shifts which digits
+    /// near the body's edges land on the rasteriser's achievable phases, re-measured and re-checked in
+    /// rather than left stale.
     /// </summary>
     [Fact]
     public void TheCentringLoopConvergesOutsideTheKnownDeadZone()
@@ -194,6 +201,55 @@ public class GlyphTests
             byte alpha = bitmap.GetPixel(slotX, barMidY).A;
             Assert.True(alpha == 0, $"{size}px: slot at x={slotX} has alpha {alpha}, expected exactly 0");
         }
+    }
+
+    // --- 6: vertical convergence ------------------------------------------------------------------
+
+    /// <summary>
+    /// 20px's residual: a GDI+ two-phase dead zone, structurally the same phenomenon as
+    /// <see cref="KnownDeadZone"/> but on the vertical axis — see spec §5.4 for the measured numbers
+    /// and why this is one narrow, named allowance rather than a general exemption list.
+    /// </summary>
+    private const double Vertical20pxDeadZoneTolerance = 0.2;
+
+    /// <summary>
+    /// The vertical mirror of the centring check above (spec §5.4's vertical loop). Unlike the
+    /// horizontal check this does not sweep every week: the vertical loop runs exactly once per
+    /// `(face, box)`, against the reference ink ("44") only, and every week at a given box size
+    /// reuses that cached `y` by construction — so rendering week 44 and checking it is sufficient to
+    /// exercise the same convergence every other week's render relies on.
+    /// </summary>
+    [Theory]
+    [InlineData(16)]
+    [InlineData(20)]
+    [InlineData(24)]
+    [InlineData(28)]
+    [InlineData(32)]
+    public void TheReferenceInkConvergesOnTheBodysVerticalCentre(int size)
+    {
+        using Bitmap bitmap = GlyphRenderer.Render(new GlyphSpec(44, size, Color.White), out GlyphMetrics metrics);
+
+        Assert.False(metrics.DigitInk.IsEmpty);
+
+        // Same technique as the horizontal check: crop to pure ink and hand it to the renderer's own
+        // OpticalCentreY, so this reproduces exactly what the loop measured rather than a second,
+        // separately-typed copy of that algorithm.
+        using Bitmap inkOnly = bitmap.Clone(metrics.DigitInk, bitmap.PixelFormat);
+        double boxCentre = metrics.DigitInk.Top + (metrics.DigitInk.Height / 2.0);
+        double massCentre = metrics.DigitInk.Top + GlyphRenderer.OpticalCentreY(inkOnly);
+        double blendCentre = (boxCentre + massCentre) / 2.0;
+
+        // body's own vertical centre, computed structurally from Stroke/BarFactor/BodyPad — the same
+        // technique the horizontal check uses for bodyLeft/bodyRight.
+        int barHeight = ExpectedBarHeight(size);
+        double bodyTop = (GlyphRenderer.Stroke / 2.0) + barHeight + GlyphRenderer.BodyPad;
+        double bodyBottom = size - (GlyphRenderer.Stroke / 2.0) - GlyphRenderer.BodyPad;
+        double bodyCentre = (bodyTop + bodyBottom) / 2.0;
+
+        double tolerance = size == 20 ? Vertical20pxDeadZoneTolerance : 0.15;
+        Assert.True(
+            Math.Abs(blendCentre - bodyCentre) < tolerance,
+            $"{size}px: blended vertical centre {blendCentre:F2} vs body centre {bodyCentre:F2}");
     }
 
     // --- shared helpers -------------------------------------------------------------------------

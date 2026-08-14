@@ -469,8 +469,8 @@ appeared in production, in October. Compute the reference by probing `'0'`..`'9'
 doubling the widest; do not hard-code `"44"`, which is a property of the installed face.
 
 Everything is fitted to the reference, **never to the week being displayed**, so the glyph does not
-resize as the year goes on. Vertical placement likewise comes from the reference's ink, so digits do
-not shift baseline between weeks.
+resize as the year goes on. Vertical placement likewise comes from the reference's ink — specifically
+the converged, cached `y` §5.4 derives against it — so digits do not shift baseline between weeks.
 
 ### 5.4 The centring rule [`06`]
 
@@ -506,6 +506,54 @@ Two things this shape buys, both of which were bugs:
 
 The **separate digit layer** is not an implementation detail: it is what keeps "where did the ink go"
 answerable underneath a frame, and it is what `GlyphMetrics.DigitInk` reports (§5.1).
+
+**Vertical placement mirrors this exactly**, converging `y` instead of `x`:
+
+```
+draw the reference ink ("44") onto its own box×box layer at a starting y
+  actual   = InkBoundsOf(layer)
+  centre   = ((actual.Y + actual.Height/2) + OpticalCentreY(layer)) / 2
+  drift    = body's own vertical centre - centre
+  if |drift| < 0.15 px: done
+  y += drift; repeat, at most 4 times, taking the attempt with the smallest |drift| if none converge
+```
+
+Three differences from the horizontal loop, all deliberate:
+
+- **The target is always `body`'s own vertical centre, never `page`'s.** The binding bar's visual
+  weight pulls the eye down by roughly 2.5–3.5 px depending on box size — far more than "digits sit
+  low by up to 1 px" describes — and blending toward `page` to compensate for it was considered and
+  rejected: it conflates two different problems (the digit's placement within its own box vs. the
+  binding bar's visual weight) behind one number.
+- **The loop runs once per `(face, box)`, against the reference ink only — never per week.** Running
+  it per week, against each week's own digits, would mirror the horizontal loop more literally, but it
+  reverses the "digits do not shift baseline between weeks" decision above: a per-week vertical
+  convergence would let e.g. `"1"`'s thin ink land at a different `y` than `"44"`'s. The result is
+  cached the same way `FitCache` already keys the fit result on `(face, box)`, so only the very first
+  render at a given box size ever runs this loop; every week after that reuses the cached `y`.
+- **On non-convergence, the loop keeps the best of its (at most 4) tried attempts, not simply the
+  last.** The horizontal loop can get away with "last" because it composites whatever `layer` last
+  drew; this loop hands back a bare `y` for a draw that happens later, so "last" risks handing back
+  the worse of an oscillating pair. Tracking the minimum `|drift|` seen is not a new tuning knob — the
+  cap and tolerance are unchanged — it only decides which already-computed candidate to report.
+
+Re-derived from the shipped loop (design's throwaway diagnostic estimated 1.00 / 0.50 / 0.00 / 0.50 /
+1.00 px and was, as its own notes warned, not to be trusted as a fixture): the actual correction moves
+the digits **0.54 px higher at 16 px, 0.00 px at 20 px, 0.65 px at 24 px, 0.24 px at 28 px, and 0.66 px
+at 32 px** than the old static formula (`y = round(body centre − referenceInk.Height/2) −
+referenceInk.Y`) placed them — that formula had no correction step, so it landed wherever the
+reference ink's raw bounding box happened to fall, not where the blend of box-centre and mass-centre
+actually converges.
+
+This converges cleanly at 16/24/28/32 px. At **20 px, "44" sits in the vertical equivalent of the
+horizontal loop's known GDI+ two-phase dead zone**: the drift oscillates between ~0.175 px and
+~0.225 px and neither lands inside the 0.15 px band, confirmed stable even at 40 iterations of the
+identical loop — a property of the rasteriser at that exact size, not a bug in the loop. The "best of
+attempts" rule above already returns the closer of the two states (0.175 px) rather than leaving it to
+iteration-count parity, but that is still outside 0.15 px, so `GlyphTests.cs`'s vertical convergence
+test holds every size to the real 0.15 px band except 20 px, which gets one narrow, explicitly named
+allowance (0.2 px) — not a general exemption list, and not a change to the cap or tolerance the
+production loop itself uses.
 
 ### 5.5 Ink [`07`, `13`]
 

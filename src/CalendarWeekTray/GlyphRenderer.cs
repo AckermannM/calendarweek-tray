@@ -35,12 +35,14 @@ internal static class GlyphRenderer
     internal const float SlotCentreB = 0.68f;
     private const int MeasurePadding = 16;
 
-    // Both caches are keyed on values that are inputs to the render, so neither can go stale the
-    // way a cached Font would (§5.7). Body width/height, and therefore the fit result, are a pure
-    // function of (face, box) once the constants above are fixed. Concurrent because nothing here
-    // pins Render to the UI thread, and a test suite is free to call it from several at once.
+    // All three caches are keyed on values that are inputs to the render, so none can go stale the
+    // way a cached Font would (§5.7). Body width/height, and therefore the fit result and the
+    // converged vertical placement, are a pure function of (face, box) once the constants above are
+    // fixed. Concurrent because nothing here pins Render to the UI thread, and a test suite is free
+    // to call it from several at once.
     private static readonly ConcurrentDictionary<string, string> ReferenceCache = new();
     private static readonly ConcurrentDictionary<(string Face, int Box), (int Px, Rectangle Ink)> FitCache = new();
+    private static readonly ConcurrentDictionary<(string Face, int Box), float> YCache = new();
 
     internal static Bitmap Render(GlyphSpec spec) => Render(spec, out _);
 
@@ -121,9 +123,10 @@ internal static class GlyphRenderer
         using SolidBrush brush = new(colour);
         Rectangle ink = MeasureInk(number, font);
 
-        // Vertical placement comes from the reference, not the week, so digits do not shift
-        // baseline between weeks.
-        float y = MathF.Round(area.Y + ((area.Height - referenceInk.Height) / 2f)) - referenceInk.Y;
+        // Vertical placement comes from a one-time convergence against the reference ink, cached per
+        // (face, box) exactly like the fit result, so every week at a given box size shares one
+        // baseline and only the reference calculation ever runs the loop.
+        float y = YCache.GetOrAdd((Face, box), _ => ComputeReferenceY(reference, font, referenceInk, area, box));
         float x = area.X + ((area.Width - ink.Width) / 2f) - ink.X;
 
         // The digits go onto their own layer so "where did the ink go" stays answerable
@@ -168,6 +171,73 @@ internal static class GlyphRenderer
 
         graphics.DrawImageUnscaled(layer, 0, 0);
         return (digitInk, typeSizePx, converged);
+    }
+
+    /// <summary>
+    /// Converges the reference ink's blended vertical centre onto <paramref name="area"/>'s own
+    /// vertical centre — a mirror of the horizontal loop above, but run once against the reference
+    /// ink only (never a week's own digits) and cached by the caller, not per render. Same 4-iteration
+    /// cap and 0.15 px tolerance as the horizontal loop.
+    /// </summary>
+    private static float ComputeReferenceY(string reference, Font font, Rectangle referenceInk, RectangleF area, int box)
+    {
+        float targetCentre = area.Y + (area.Height / 2f);
+        float y = MathF.Round(area.Y + ((area.Height - referenceInk.Height) / 2f)) - referenceInk.Y;
+
+        // Drawn at the same horizontal position the real digit draw settles at (area's horizontal
+        // centre, mirroring DrawNumber's own initial x guess) rather than area.X: GDI+'s antialiasing
+        // couples the horizontal subpixel phase into the vertical ink measurement, so measuring at an
+        // arbitrary x would calibrate y against a phase no real render ever lands on.
+        float x = area.X + ((area.Width - referenceInk.Width) / 2f) - referenceInk.X;
+
+        using SolidBrush brush = new(Color.White);
+        using Bitmap layer = new(box, box, PixelFormat.Format32bppArgb);
+
+        // Unlike the horizontal loop — which is free to just keep whatever "layer" last drew, because
+        // it composites that layer directly — this loop hands back a bare y for a draw that happens
+        // later, so simply keeping the last attempt's y risks handing back the worse of two states
+        // when the reference sits in a GDI+ two-phase dead zone (drift oscillates rather than
+        // shrinking). Tracking the best of the (at most 4) attempts tried is not a new tuning knob —
+        // the cap and tolerance are unchanged — it only decides which already-computed candidate to
+        // report if none of them converge.
+        float bestY = y;
+        float bestDrift = float.PositiveInfinity;
+
+        for (int attempt = 0; attempt < 4; attempt++)
+        {
+            using (Graphics layerGraphics = Graphics.FromImage(layer))
+            {
+                layerGraphics.Clear(Color.Transparent);
+                layerGraphics.TextRenderingHint = Hint;
+                layerGraphics.DrawString(reference, font, brush, x, y, StringFormat.GenericTypographic);
+            }
+
+            Rectangle ink = InkBoundsOf(layer);
+            if (ink.IsEmpty)
+            {
+                break;
+            }
+
+            float boxCentre = ink.Y + (ink.Height / 2f);
+            float massCentre = OpticalCentreY(layer);
+            float blendCentre = (boxCentre + massCentre) / 2f;
+
+            float drift = targetCentre - blendCentre;
+            if (MathF.Abs(drift) < MathF.Abs(bestDrift))
+            {
+                bestY = y;
+                bestDrift = drift;
+            }
+
+            if (MathF.Abs(drift) < 0.15f)
+            {
+                break;
+            }
+
+            y += drift;
+        }
+
+        return bestY;
     }
 
     /// <summary>
@@ -392,5 +462,45 @@ internal static class GlyphRenderer
         }
 
         return total == 0 ? bitmap.Width / 2f : (float)(weighted / total);
+    }
+
+    /// <summary>
+    /// The alpha-weighted vertical centre of mass — the vertical mirror of <see cref="OpticalCentreX"/>.
+    /// internal, not private: the vertical centring test calls this directly for the same reason
+    /// <see cref="OpticalCentreX"/> is internal (§5.4).
+    /// </summary>
+    internal static float OpticalCentreY(Bitmap bitmap)
+    {
+        double weighted = 0;
+        double total = 0;
+        Rectangle rect = new(0, 0, bitmap.Width, bitmap.Height);
+        BitmapData data = bitmap.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        try
+        {
+            unsafe
+            {
+                for (int y = 0; y < rect.Height; y++)
+                {
+                    byte* row = (byte*)data.Scan0 + (y * data.Stride);
+                    for (int x = 0; x < rect.Width; x++)
+                    {
+                        int alpha = row[(x * 4) + 3];
+                        if (alpha == 0)
+                        {
+                            continue;
+                        }
+
+                        weighted += alpha * (y + 0.5);
+                        total += alpha;
+                    }
+                }
+            }
+        }
+        finally
+        {
+            bitmap.UnlockBits(data);
+        }
+
+        return total == 0 ? bitmap.Height / 2f : (float)(weighted / total);
     }
 }
