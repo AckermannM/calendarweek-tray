@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>WinExe</OutputType>
+		<TargetFramework>net10.0-windows</TargetFramework>
+		<UseWindowsForms>true</UseWindowsForms>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<RootNamespace>CalendarWeekTray</RootNamespace>
+		<AssemblyName>CalendarWeekTray</AssemblyName>
+		<Version>1.0.0</Version>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<!-- Render at SM_CXSMICON for the current monitor's DPI (01, Q10). -->
+		<ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+		<!-- We do not ship AOT (04 proved the SDK refuses PublishTrimmed for WinForms),
+		     but the analyzers are free and fail the build if reflection-based JSON creeps back in. -->
+		<IsAotCompatible>true</IsAotCompatible>
+		<!-- Required by LibraryImport; without it the DestroyIcon P/Invoke fails SYSLIB1062. -->
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<!-- de-DE depends on it. Never flip this as a size optimisation. -->
+		<InvariantGlobalization>false</InvariantGlobalization>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- 15: GlyphRenderer and friends stay internal; the test project needs to see them. -->
+		<InternalsVisibleTo Include="CalendarWeekTray.Tests" />
+	</ItemGroup>
+
+</Project>

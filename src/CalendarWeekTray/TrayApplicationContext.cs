@@ -8,22 +8,22 @@ namespace CalendarWeekTray;
 /// </summary>
 internal sealed class TrayApplicationContext : ApplicationContext
 {
-    private readonly NotifyIcon _notifyIcon;
-    private nint _iconHandle;
+    private readonly NotifyIcon notifyIcon;
+    private nint iconHandle;
 
     public TrayApplicationContext()
     {
         ContextMenuStrip menu = new();
-        menu.Items.Add("Quit", image: null, (_, _) => ExitThread());
+        menu.Items.Add("Quit", image: null, (_, _) => this.ExitThread());
 
-        _notifyIcon = new NotifyIcon
+        this.notifyIcon = new NotifyIcon
         {
             ContextMenuStrip = menu,
             Text = "calendarweek-tray",
             Visible = true,
         };
 
-        SetGlyph(RenderPlaceholder());
+        this.SetGlyph(RenderPlaceholder());
     }
 
     /// <summary>
@@ -35,11 +35,11 @@ internal sealed class TrayApplicationContext : ApplicationContext
         using (bitmap)
         {
             nint handle = bitmap.GetHicon();
-            Icon? previous = _notifyIcon.Icon;
-            nint previousHandle = _iconHandle;
+            Icon? previous = this.notifyIcon.Icon;
+            nint previousHandle = this.iconHandle;
 
-            _notifyIcon.Icon = Icon.FromHandle(handle);
-            _iconHandle = handle;
+            this.notifyIcon.Icon = Icon.FromHandle(handle);
+            this.iconHandle = handle;
 
             previous?.Dispose();
             if (previousHandle != 0)
@@ -78,14 +78,14 @@ internal sealed class TrayApplicationContext : ApplicationContext
         if (disposing)
         {
             // Without this the shell keeps drawing the icon until the user hovers over it.
-            _notifyIcon.Visible = false;
-            _notifyIcon.Icon?.Dispose();
-            _notifyIcon.Dispose();
+            this.notifyIcon.Visible = false;
+            this.notifyIcon.Icon?.Dispose();
+            this.notifyIcon.Dispose();
 
-            if (_iconHandle != 0)
+            if (this.iconHandle != 0)
             {
-                NativeMethods.DestroyIcon(_iconHandle);
-                _iconHandle = 0;
+                NativeMethods.DestroyIcon(this.iconHandle);
+                this.iconHandle = 0;
             }
         }
 
