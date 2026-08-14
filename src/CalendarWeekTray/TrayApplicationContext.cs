@@ -15,31 +15,42 @@ internal sealed class TrayApplicationContext : ApplicationContext
 
     private readonly NotifyIcon notifyIcon;
     private readonly System.Windows.Forms.Timer timer;
+    private readonly ToolStripMenuItem reloadMenuItem;
+    private readonly ToolStripMenuItem quitMenuItem;
 
-    // Reload (ticket 07) mutates this; ticket 06 loads it once and never touches it again.
-    private readonly AppConfig config;
+    // Reload (§7) mutates this after startup; there is otherwise no writer.
+    private AppConfig config;
+
+    // Set at startup and by a reload (§3.4); Reconcile() turns it into the displayed diagnostic.
+    private ConfigFault? configFault;
 
     private GlyphIcon? glyphIcon;
     private DesiredState? lastApplied;
     private SynchronizationContext? uiContext;
     private bool timerCalibrated;
     private bool renderFaultBalloonShown;
+    private bool lastReconcileFailed;
+    private string? lastConfigFaultBalloonText;
 
     public TrayApplicationContext()
     {
+        // Left-click does nothing (spec §7) — there is deliberately no Click/MouseClick handler.
+        this.reloadMenuItem = new ToolStripMenuItem(text: string.Empty, image: null, this.OnReloadConfiguration);
+        this.quitMenuItem = new ToolStripMenuItem(text: string.Empty, image: null, (_, _) => this.ExitThread());
+
         ContextMenuStrip menu = new();
-        menu.Items.Add("Quit", image: null, (_, _) => this.ExitThread());
+        menu.Items.Add(this.reloadMenuItem);
+        menu.Items.Add(this.quitMenuItem);
 
         this.notifyIcon = new NotifyIcon
         {
             ContextMenuStrip = menu,
         };
 
-        // Config-fault surfacing (spec §9) belongs to Reconcile()'s configError argument, but
-        // turning a ConfigFault into a displayed diagnostic is ticket 07's job — Reconcile() below
-        // always passes configError: null, even though configResult.Fault may be sitting unread.
-        ConfigLoadResult configResult = ConfigLoader.Load();
+        ConfigLoadResult configResult = LoadConfigSafely();
         this.config = configResult.Config;
+        this.configFault = configResult.Fault;
+        this.ApplyMenuText();
 
         // Step 4 of spec §8.1: render and assign the first icon, then make it visible. This goes
         // through Reconcile() rather than a separate direct render — "nothing re-renders directly"
@@ -90,6 +101,54 @@ internal sealed class TrayApplicationContext : ApplicationContext
         this.Reconcile();
     }
 
+    // --- menu (spec §7) ------------------------------------------------------------------------
+
+    /// <summary>
+    /// Re-runs §3.3 resolution and load. On failure the running config is kept — §3.4's reload
+    /// behaviour: reverting a working icon to defaults over a fat-fingered edit is worse than
+    /// ignoring it — but the fault is recorded either way so <see cref="Reconcile"/> reports it. A
+    /// language change is not visible in <see cref="Reconcile"/>'s <see cref="DesiredState"/> tuple,
+    /// so the menu text is re-applied directly here rather than left to the tuple comparison.
+    /// </summary>
+    private void OnReloadConfiguration(object? sender, EventArgs e)
+    {
+        ConfigLoadResult result = ConfigLoader.Load();
+        if (result.Fault is null)
+        {
+            this.config = result.Config;
+        }
+
+        this.configFault = result.Fault;
+        this.ApplyMenuText();
+        this.Reconcile();
+    }
+
+    /// <summary>
+    /// §3.4's startup row — "never fail to start over a typo" — extended past what
+    /// <see cref="ConfigLoader.Load()"/> itself catches. This runs before <c>Application.Run</c>
+    /// pumps (§6.4), so WinForms' ambient <c>ThreadException</c> handling cannot intercept an
+    /// escaping exception here the way it can everywhere else, which goes through
+    /// <see cref="Reconcile"/>'s own catch instead.
+    /// </summary>
+    private static ConfigLoadResult LoadConfigSafely()
+    {
+        try
+        {
+            return ConfigLoader.Load();
+        }
+        catch (Exception ex)
+        {
+            return new ConfigLoadResult(new AppConfig(), new ConfigFault(ex.Message, LineNumber: null));
+        }
+    }
+
+    private void ApplyMenuText()
+    {
+        Language language = ConfigLoader.ResolveLanguage(this.config.Language);
+        this.reloadMenuItem.Text = Strings.MenuReload(language);
+        this.quitMenuItem.Text = Strings.MenuQuit(language);
+    }
+
     // --- triggers (spec §6.3) — every one of these ends in a Reconcile() on the UI thread --------
 
     /// <summary>Fires on a background thread with the uninformative <c>category=General</c>;
@@ -126,15 +185,28 @@ internal sealed class TrayApplicationContext : ApplicationContext
         DesiredState? desired = null;
         try
         {
+            Language language = ConfigLoader.ResolveLanguage(this.config.Language);
+            string? configErrorText = FormatConfigError(this.configFault, language);
+
             desired = TrayState.Compute(
                 now: DateTime.Now,
                 sizePx: SystemInformation.SmallIconSize.Width,
                 highContrast: SystemInformation.HighContrast,
                 systemUsesLightTheme: ReadSystemUsesLightTheme(),
                 config: this.config,
-                configError: null);
+                configError: configErrorText);
 
-            if (desired == this.lastApplied)
+            // Runs on every call, independent of the tuple comparison below, so a fault present
+            // since before NotifyIcon.Visible was set still gets its one balloon once the icon
+            // actually appears — the tuple already reflects the fault by then and would otherwise
+            // never change again to re-enter this branch.
+            this.MaybeShowConfigFaultBalloon(configErrorText);
+
+            // The !lastReconcileFailed guard, not just the tuple comparison: a prior failure left
+            // NotifyIcon.Text holding HandleReconcileFailure's fault-suffixed string without
+            // touching lastApplied, so an unchanged tuple here would otherwise early-return and
+            // leave that stale suffix showing forever once the fault has actually cleared.
+            if (!this.lastReconcileFailed && desired == this.lastApplied)
             {
                 return;
             }
@@ -142,9 +214,12 @@ internal sealed class TrayApplicationContext : ApplicationContext
             this.SetGlyph(GlyphRenderer.Render(new GlyphSpec(desired.Value.Week, desired.Value.SizePx, desired.Value.Ink)));
             this.notifyIcon.Text = desired.Value.Tooltip;
             this.lastApplied = desired;
+            this.lastReconcileFailed = false;
         }
         catch (Exception)
         {
+            this.lastReconcileFailed = true;
+
             try
             {
                 this.HandleReconcileFailure(desired?.Tooltip);
@@ -174,6 +249,33 @@ internal sealed class TrayApplicationContext : ApplicationContext
             this.renderFaultBalloonShown = true;
             this.notifyIcon.ShowBalloonTip(0, Strings.BalloonTitle, Strings.BalloonBody(fault), ToolTipIcon.Warning);
         }
+    }
+
+    /// <summary>The 0-based <see cref="JsonException.LineNumber"/> becomes 1-based for display
+    /// (spec §9); lifted <c>long?</c> addition leaves an absent line number as <see langword="null"/>.</summary>
+    private static string? FormatConfigError(ConfigFault? fault, Language language) =>
+        fault is null ? null : Strings.ConfigFault(language, fault.Value.LineNumber + 1);
+
+    /// <summary>
+    /// Spec §9: one balloon per distinct config-fault string, never repeated while the same fault
+    /// persists across the 60 s poll. A fault clearing resets the tracked text, so a fault that
+    /// recurs later — the user broke it again after fixing it — is treated as news again.
+    /// </summary>
+    private void MaybeShowConfigFaultBalloon(string? configErrorText)
+    {
+        if (configErrorText is null)
+        {
+            this.lastConfigFaultBalloonText = null;
+            return;
+        }
+
+        if (configErrorText == this.lastConfigFaultBalloonText || !this.notifyIcon.Visible)
+        {
+            return;
+        }
+
+        this.lastConfigFaultBalloonText = configErrorText;
+        this.notifyIcon.ShowBalloonTip(0, Strings.BalloonTitle, Strings.BalloonBody(configErrorText), ToolTipIcon.Warning);
     }
 
     /// <summary>Assigns the new icon to <see cref="NotifyIcon"/> before disposing the previous

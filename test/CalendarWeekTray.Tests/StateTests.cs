@@ -84,4 +84,37 @@ public class StateTests
 
         Assert.Equal(expected.ToArgb(), state.Ink.ToArgb());
     }
+
+    // --- diagnostics (spec §9): the pure string helpers ticket 07 wires into Reconcile() ---------
+
+    [Fact]
+    public void ConfigFaultCarriesTheOneBasedLineNumberInBothLanguages()
+    {
+        Assert.Equal("⚠ config.json ungültig (Zeile 5)", Strings.ConfigFault(Language.De, lineNumber: 5));
+        Assert.Equal("⚠ config.json invalid (line 5)", Strings.ConfigFault(Language.En, lineNumber: 5));
+    }
+
+    [Fact]
+    public void ConfigFaultOmitsTheLineNumberWhenAbsent()
+    {
+        Assert.Equal("⚠ config.json ungültig", Strings.ConfigFault(Language.De, lineNumber: null));
+        Assert.Equal("⚠ config.json invalid", Strings.ConfigFault(Language.En, lineNumber: null));
+    }
+
+    [Fact]
+    public void AppendFaultAddsTheSeparatorOnlyWhenABaseTooltipExists()
+    {
+        string fault = Strings.RenderFault(Language.En);
+
+        Assert.Equal("Calendar week 33 · ⚠ icon rendering failed", Strings.AppendFault("Calendar week 33", fault));
+        Assert.Equal(fault, Strings.AppendFault(null, fault));
+        Assert.Equal(fault, Strings.AppendFault(string.Empty, fault));
+    }
+
+    [Fact]
+    public void BalloonBodyStripsTheLeadingWarningMarker()
+    {
+        Assert.Equal("icon rendering failed", Strings.BalloonBody(Strings.RenderFault(Language.En)));
+        Assert.Equal("config.json invalid (line 5)", Strings.BalloonBody(Strings.ConfigFault(Language.En, lineNumber: 5)));
+    }
 }
