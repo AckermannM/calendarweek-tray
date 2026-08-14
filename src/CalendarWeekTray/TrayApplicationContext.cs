@@ -1,4 +1,4 @@
-using System.Globalization;
+using Microsoft.Win32;
 
 namespace CalendarWeekTray;
 
@@ -8,6 +8,9 @@ namespace CalendarWeekTray;
 /// </summary>
 internal sealed class TrayApplicationContext : ApplicationContext
 {
+    private const string PersonalizeKey = @"HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+    private const string PersonalizeValue = "SystemUsesLightTheme";
+
     private readonly NotifyIcon notifyIcon;
     private nint iconHandle;
 
@@ -19,12 +22,30 @@ internal sealed class TrayApplicationContext : ApplicationContext
         this.notifyIcon = new NotifyIcon
         {
             ContextMenuStrip = menu,
-            Text = "calendarweek-tray",
-            Visible = true,
         };
 
-        this.SetGlyph(RenderPlaceholder());
+        // Config-fault surfacing (spec §9) belongs to the Reconcile() pipeline, not this ticket —
+        // this render passes no fault through, even if config.json failed to parse.
+        ConfigLoadResult configResult = ConfigLoader.Load();
+        DesiredState state = TrayState.Compute(
+            now: DateTime.Now,
+            sizePx: SystemInformation.SmallIconSize.Width,
+            highContrast: SystemInformation.HighContrast,
+            systemUsesLightTheme: ReadSystemUsesLightTheme(),
+            config: configResult.Config,
+            configError: null);
+
+        this.notifyIcon.Text = state.Tooltip;
+        this.SetGlyph(GlyphRenderer.Render(new GlyphSpec(state.Week, state.SizePx, state.Ink)));
+
+        // Setting Visible before an icon exists shows a blank frame (spec §8.1).
+        this.notifyIcon.Visible = true;
     }
+
+    /// <summary>Spec §5.5's <c>lightTaskbar</c> registry read for the <c>auto</c> theme. Null means
+    /// the value is absent, which <see cref="TrayState"/> treats as light.</summary>
+    private static bool? ReadSystemUsesLightTheme() =>
+        Registry.GetValue(PersonalizeKey, PersonalizeValue, defaultValue: null) is int value ? value != 0 : null;
 
     /// <summary>
     /// Assigns a freshly rendered bitmap as the tray icon and destroys the HICON it replaces.
@@ -47,30 +68,6 @@ internal sealed class TrayApplicationContext : ApplicationContext
                 NativeMethods.DestroyIcon(previousHandle);
             }
         }
-    }
-
-    /// <summary>
-    /// A deliberately crude glyph, present only so there is something in the tray to hang 06's
-    /// prototype off. It settles nothing about prefix, layout, font or padding.
-    /// </summary>
-    private static Bitmap RenderPlaceholder()
-    {
-        Size size = SystemInformation.SmallIconSize;
-        Bitmap bitmap = new(size.Width, size.Height);
-
-        using Graphics graphics = Graphics.FromImage(bitmap);
-        graphics.Clear(Color.Transparent);
-
-        string week = ISOWeek.GetWeekOfYear(DateTime.Now).ToString("00", CultureInfo.InvariantCulture);
-        using Font font = new("Segoe UI", size.Height * 0.62f, GraphicsUnit.Pixel);
-        using StringFormat format = new()
-        {
-            Alignment = StringAlignment.Center,
-            LineAlignment = StringAlignment.Center,
-        };
-
-        graphics.DrawString(week, font, Brushes.White, new RectangleF(Point.Empty, size), format);
-        return bitmap;
     }
 
     protected override void Dispose(bool disposing)

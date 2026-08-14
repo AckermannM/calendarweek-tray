@@ -21,7 +21,9 @@ internal readonly record struct ConfigLoadResult(AppConfig Config, ConfigFault? 
 internal static class ConfigLoader
 {
     private const string DirectoryName = "calendarweek-tray";
-    private const string FileName = "config.json";
+
+    // internal, not private: Strings.cs's fault strings name this file and must not drift from it.
+    internal const string FileName = "config.json";
 
     internal static ConfigLoadResult Load() => Load(CandidatePaths());
 
