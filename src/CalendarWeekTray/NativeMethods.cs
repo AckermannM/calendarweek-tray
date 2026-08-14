@@ -6,8 +6,8 @@ internal static partial class NativeMethods
 {
     /// <summary>
     /// <see cref="Icon.FromHandle"/> does not own the HICON it wraps, so every icon built from a
-    /// <see cref="Bitmap"/> leaks a GDI handle unless this is called on it. Ownership discipline is
-    /// decided properly in ticket 07; this declaration exists so the scaffold does not leak.
+    /// <see cref="Bitmap"/> leaks a GDI handle unless this is called on it. <see cref="GlyphIcon"/>
+    /// is the type that owns this discipline (spec §6.5).
     /// </summary>
     [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

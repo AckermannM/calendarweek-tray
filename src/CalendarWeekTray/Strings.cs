@@ -84,13 +84,24 @@ internal static class Strings
     {
         string prefix = language == Language.De ? $"Kalenderwoche {week}" : $"Calendar week {week}";
         string text = $"{prefix}{Separator}{DateRange(language, monday, sunday)}";
-        if (fault is not null)
-        {
-            text = $"{text}{Separator}{fault}";
-        }
-
-        return text.Length > MaxTooltipLength ? text[..MaxTooltipLength] : text;
+        return fault is null ? Truncate(text) : Truncate($"{text}{Separator}{fault}");
     }
+
+    /// <summary>
+    /// Appends a fault to an already-composed tooltip and truncates it the same way
+    /// <see cref="ComposeTooltip"/> does. <c>Reconcile()</c>'s exception path (spec §6.2) has no
+    /// week or date to recompose the tooltip from — only the last one that rendered successfully,
+    /// which is <see langword="null"/> if the very first reconcile is what failed.
+    /// </summary>
+    internal static string AppendFault(string? tooltip, string fault) =>
+        Truncate(string.IsNullOrEmpty(tooltip) ? fault : $"{tooltip}{Separator}{fault}");
+
+    /// <summary>The balloon body is the matching fault string with the leading marker removed — the
+    /// balloon already paints <see cref="ToolTipIcon.Warning"/> (spec §9).</summary>
+    internal static string BalloonBody(string fault) =>
+        fault.StartsWith($"{WarningMarker} ", StringComparison.Ordinal) ? fault[(WarningMarker.Length + 1)..] : fault;
+
+    private static string Truncate(string text) => text.Length > MaxTooltipLength ? text[..MaxTooltipLength] : text;
 
     private static string FormatDay(int day, Language language) =>
         language == Language.De
