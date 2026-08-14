@@ -6,17 +6,13 @@ A Windows 11 notification-area applet that displays the current ISO calendar wee
 
 Use these terms exactly. Where a synonym is listed as avoided, it is avoided because it is actively misleading, not merely because it is different.
 
-**Kalenderwoche (KW)** — the German term for the ISO 8601 calendar week. Not a separate numbering scheme: DIN 1355-1 was aligned to ISO 8601, so "KW" and "ISO week" denote the same number. `KW` is the German-language **prefix**; `CW` is the English one.
+**Kalenderwoche (KW)** — the German term for the ISO 8601 calendar week. Not a separate numbering scheme: DIN 1355-1 was aligned to ISO 8601, so "KW" and "ISO week" denote the same number. The **word** is what the German tooltip says; the **abbreviation** `KW` appears nowhere in the applet, because since `06` the glyph carries no text.
 
 **ISO week** — the week number from `System.Globalization.ISOWeek.GetWeekOfYear`. Monday-start; week 1 is the week containing the first Thursday. _Avoid_ computing this with `Calendar.GetWeekOfYear`, which is a different and wrong answer at year boundaries.
 
-**Glyph** — the rendered image placed in the tray: prefix plus zero-padded week number, e.g. `KW01`. Use "glyph" for the visual artifact and "icon" only for the `NotifyIcon`/`HICON` that carries it, so that "render the glyph" and "assign the icon" stay distinguishable.
+**Glyph** — the rendered image placed in the tray: a calendar page — outline, filled binding bar, two ring slots — carrying the zero-padded week number in its body and **no text of any kind**. Use "glyph" for the visual artifact and "icon" only for the `NotifyIcon`/`HICON` that carries it, so that "render the glyph" and "assign the icon" stay distinguishable. _Avoid_ **prefix**, **label** and **layout**: all three named parts of an earlier glyph that `06` and `12` replaced, and `14` deleted the config keys behind them. Nothing the applet renders has a prefix, and there is only ever one form.
 
-**Prefix** — the letters preceding the number (`KW`, `CW`). **Contested since `06`: the decided glyph carries no text but the week number, so nothing in the applet currently has a prefix.** Ticket `14` decides whether the term survives; until then, do not use it to describe anything the applet renders.
-
-**Label** — the config key that overrode the prefix outright with an arbitrary string. **Contested since `06`** for the same reason — there is no prefix left to override. `01`/Q13 rests the "no further locales" argument on this key, so `14` decides both together.
-
-**Layout** — how the glyph arranged its parts: `single` (`KW32` on one line) or `stacked` (`KW` over `32`). **Both lost in `06`**, which chose a calendar page with the week number in its body. The term now describes nothing that exists, and `12` closed its last route back by deciding **one form at every size** — so there is no second form for it to select between. `14` records the deletion.
+**Tooltip** — the hover text (`Kalenderwoche 32 · 3.–9. August 2026`). Since the glyph carries no text, this is the **only** place the applet uses language at all, which is why it — not the glyph — is what the `language` key governs, and why it doubles as the persistent diagnostic channel.
 
 **Ink** — the single colour the glyph is drawn in: pure white under a dark taskbar, pure black under a light one. Use "ink" rather than "foreground" or "text colour", because the frame, binding bar and number are all drawn in it and none of them are text.
 
@@ -29,6 +25,8 @@ Use these terms exactly. Where a synonym is listed as avoided, it is avoided bec
 **Applet** — the whole program. It is a windowless per-user background process. _Avoid_ "service" and "daemon": a Windows Service runs in session 0 and cannot own a tray icon, so calling this a service describes something that is impossible to build.
 
 **Config resolution** — locating `config.json` by checking `%APPDATA%\calendarweek-tray\` then `~/.config/calendarweek-tray/`, **first found wins**. _Avoid_ "merge" — no key-by-key combination happens, deliberately.
+
+**Measured property** — the only form of automated assertion this project uses: a claim about a *number* read back out of a real render (ink bounds, gaps, alpha at a coordinate), never a comparison against a stored reference image. _Avoid_ **golden image** and **snapshot** as descriptions of what the suite does — a stored image asserts that nothing changed, which is a different and weaker claim, and one a Windows font update can falsify without a bug existing. The distinction is load-bearing: a measured property must be read from the render that actually happened, not predicted alongside it.
 
 **Re-render trigger** — anything that prompts a **reconcile**: the one-minute poll, a theme flip, a DPI change, a clock change, resume from sleep, a config reload. Enumerated with its mechanism in ticket `07`. Note the deliberate asymmetry: **the poll is the authority and every event is advisory**, so a missed event costs staleness measured in seconds, never a permanently wrong glyph. `TaskbarCreated` is *not* in this set — the shell forgetting the icon is not the glyph becoming wrong, and `NotifyIcon` re-adds the existing icon itself.
 

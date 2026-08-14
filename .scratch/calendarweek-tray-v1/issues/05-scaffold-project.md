@@ -49,6 +49,12 @@ Done. The harness `06` renders into exists, builds clean, and was confirmed work
 
 ### What was created
 
+> **Superseded by the user during [`08`](08-write-the-spec.md).** The root-level placement below is
+> reversed: v1 uses **`src/CalendarWeekTray/` and `test/CalendarWeekTray.Tests/`** with a
+> `CalendarWeekTray.slnx` at the root, per spec §1.1. Everything else in this answer stands — the
+> project's properties, the DPI decision, the `DestroyIcon` reference implementation and the traps
+> for `07` are unaffected by where the file sits.
+
 A **single project at the repo root** — no `src/` directory and no `.sln`. One project needs neither, and root placement means bare `dotnet build` / `dotnet run` work from the repo root with no arguments. Five files:
 
 | File | Purpose |
