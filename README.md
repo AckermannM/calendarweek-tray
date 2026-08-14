@@ -1,6 +1,7 @@
 # calendarweek-tray
 
-A Windows 11 notification-area applet that displays the current ISO calendar week (`KW32`).
+A Windows 11 notification-area applet that displays the current ISO calendar week as a bare number
+in a calendar-page glyph — no text of any kind.
 
 Windowless per-user background process. .NET 10, WinForms `NotifyIcon`, no third-party
 dependencies. Right-click the icon for the menu; left-click does nothing.
@@ -35,19 +36,57 @@ what keeps those working.
 The exe is not code-signed, so the first run shows **"Windows protected your PC"**. Choose
 **More info** → **Run anyway**.
 
+## First run
+
+The icon starts hidden in the overflow flyout — the `^` chevron by the clock. Windows puts
+*every* new tray icon there, and only you can move it out.
+
+Drag it from the flyout onto the taskbar, or use **Settings → Personalization → Taskbar → Other
+system tray icons** and switch **calendarweek-tray** on. Windows remembers the choice, keyed to
+where the exe lives — see **Update** before you move it.
+
 ## Build and run
 
 From source, if you have the .NET 10 SDK:
 
 ```
 dotnet build
-dotnet run
+dotnet run --project src/CalendarWeekTray
+dotnet test
 ```
+
+`dotnet run` needs the explicit project path — the repo root holds a solution file spanning both
+`src/CalendarWeekTray` and `test/CalendarWeekTray.Tests`, and a bare `dotnet run` at the root
+cannot pick one.
 
 ## Configuration
 
-`config.json` is optional — the applet runs correctly without it and never writes it.
-Path and defaults are documented once the spec lands (ticket `08`).
+`config.json` is optional — the applet runs correctly without it and never writes it. Two
+resolution paths are checked in order, **first found wins, no merging**:
+
+1. `%APPDATA%\calendarweek-tray\config.json`
+2. `%USERPROFILE%\.config\calendarweek-tray\config.json`
+
+If the first path exists but fails to parse, that is the error reported — the second path is not
+tried as a fallback.
+
+Both keys are optional and default to `"auto"`:
+
+```json
+{
+  "language": "auto",
+  "theme": "auto"
+}
+```
+
+| key | values | default | governs |
+| --- | --- | --- | --- |
+| `language` | `auto` \| `de` \| `en` | `auto` | menu items and tooltip text. `auto` follows the OS UI language, German if it is German, English otherwise |
+| `theme` | `auto` \| `light` \| `dark` | `auto` | the glyph's ink colour. `auto` follows the taskbar's light/dark setting; overridden outright by Windows High Contrast |
+
+Values are matched case-insensitively. An unknown key or an unknown value for a known key is
+**never ignored** — it is reported the same way as invalid JSON (a balloon tip plus a diagnostic
+line in the hover tooltip), and the applet falls back to defaults rather than failing to start.
 
 ## Update
 
